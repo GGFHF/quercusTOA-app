@@ -1,0 +1,9 @@
+name: quercustoa-mafft
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - mafft
+  - biopython
+  - matplotlib
+  - pymsaviz

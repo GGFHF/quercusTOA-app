@@ -1,0 +1,13 @@
+name: quercustoa
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - biopython
+  - matplotlib
+  - numpy
+  - pandas
+  - plotnine
+  - pymsaviz
+  - pyqt
+  - scipy

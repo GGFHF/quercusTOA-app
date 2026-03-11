@@ -1649,7 +1649,7 @@ class DialogHomologyRelationships(QDialog):
             webbrowser.open_new(f'file://{image_file_path}')
             QApplication.restoreOverrideCursor()
         else:
-            text = 'The alignment of homologous proteins has not been generated.'
+            text = 'The alignment of homologous proteins has not been generated. Please check the result log.'
             QMessageBox.warning(self, self.title, text, buttons=QMessageBox.Ok)
 
     #---------------
@@ -1668,7 +1668,7 @@ class DialogHomologyRelationships(QDialog):
             webbrowser.open_new(f'file://{image_file_path}')
             QApplication.restoreOverrideCursor()
         else:
-            text = 'The phylogenetic tree of homologous proteins has not been generated.'
+            text = 'The phylogenetic tree of homologous proteins has not been generated. Please check the result log.'
             QMessageBox.warning(self, self.title, text, buttons=QMessageBox.Ok)
 
     #---------------
@@ -1687,7 +1687,7 @@ class DialogHomologyRelationships(QDialog):
             webbrowser.open_new(f'file://{image_file_path}')
             QApplication.restoreOverrideCursor()
         else:
-            text = 'The alignment of homologous genes has not been generated.'
+            text = 'The alignment of homologous genes has not been generated. Please check the result log.'
             QMessageBox.warning(self, self.title, text, buttons=QMessageBox.Ok)
 
     #---------------

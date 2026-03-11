@@ -33,6 +33,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 from Bio import Phylo
 
@@ -151,10 +152,12 @@ def align_fasta_seqs(fasta_seq_file, tree_generation):
     alignment_file = f'{fasta_seq_file}.aln'
     if seq_number > 1:
         genlib.Message.print('info', f'Aligning sequences in {alignment_file} ...')
+        start_time = time.perf_counter()
         with open(alignment_file, mode='w', encoding='iso-8859-1') as alignment_file_id:
             result = subprocess.run(['mafft', '--auto', '--anysymbol', fasta_seq_file], stdout=alignment_file_id, stderr=subprocess.PIPE, text=True, check=True)
+        end_time = time.perf_counter()
         if result.returncode == 0:
-            genlib.Message.print('info', 'The alignment is done.')
+            genlib.Message.print('info', f'The alignment is done (run time: {end_time - start_time:.2f} s).')
         else:
             raise genlib.ProgramException('', 'M001', 'mafft', result.stderr)
     else:
@@ -166,9 +169,12 @@ def align_fasta_seqs(fasta_seq_file, tree_generation):
     alignment_plot_file = f'{fasta_seq_file}.aln.pdf'
     try:
         genlib.Message.print('info', 'Plotting the alignment ...')
+        start_time = time.perf_counter()
         alignment_plot = MsaViz(alignment_file, format='fasta', wrap_length=80, sort=False, color_scheme='Flower', show_count=True, show_consensus=False)
         alignment_plot.savefig(alignment_plot_file)
-        genlib.Message.print('info', 'Plot is done.')
+        plt.close()
+        end_time = time.perf_counter()
+        genlib.Message.print('info', f'Plot is done (run time: {end_time - start_time:.2f} s).')
     except Exception as e:
         raise genlib.ProgramException(e, 'M001', 'pymsaviz', e)
 
@@ -180,18 +186,24 @@ def align_fasta_seqs(fasta_seq_file, tree_generation):
 
             # generate the guide tree represents the clustering of sequences in Newick format
             genlib.Message.print('info', 'Generating the guide tree ...')
+            start_time = time.perf_counter()
             result = subprocess.run(['mafft', '--treeout', fasta_seq_file], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=True)
+            end_time = time.perf_counter()
             if result.returncode == 0:
-                genlib.Message.print('info', 'The generation is done.')
+                genlib.Message.print('info', f'The generation is done (run time: {end_time - start_time:.2f} s).')
             else:
                 raise genlib.ProgramException('', 'M001', 'mafft', result.stderr)
 
             # plot the guide tree
+            genlib.Message.print('info', 'Plotting the guide tree ...')
+            start_time = time.perf_counter()
             tree = Phylo.read(f'{fasta_seq_file}.tree', 'newick')
             Phylo.draw(tree, do_show=False)
             tree_plot_file = f'{fasta_seq_file}.tree.pdf'
             plt.savefig(tree_plot_file)
             plt.close()
+            end_time = time.perf_counter()
+            genlib.Message.print('info', f'Plot is done (run time: {end_time - start_time:.2f} s).')
 
 #-------------------------------------------------------------------------------
 

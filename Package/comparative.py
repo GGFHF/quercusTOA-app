@@ -983,7 +983,7 @@ class FormSearchSeqsHomology(QWidget):
                 file_id.write( '                    --verbose=N \\\n')
                 file_id.write( '                    --trace=N\n')
                 file_id.write( '            RC=$?\n')
-                file_id.write( '            if [ $RC -ne 0 ]; then manage_error align-fasta-seqs.py $RC; fi\n')
+                file_id.write( '            if [ $RC -ne 0 ]; then echo "*** ERROR: Alignment is not plotted. You may need to increase the size of the RAM or swap file."; fi\n')
                 file_id.write( '        done < $FASTA_FILE_LIST\n')
                 file_id.write( '        conda deactivate\n')
                 file_id.write( '        echo "FASTA files are aligned."\n')
@@ -2165,7 +2165,7 @@ class FormBrowsetHomologySearch(QWidget):
                     raise genlib.ProgramException(e, 'F006', os.path.basename(homology_relationships_file), record_counter)
 
                 # add data to the dictionary
-                key = f'{seq_id}-{species_name}'
+                key = f'{seq_id}-{species_name}-{homologous_gene_id}'
                 homology_relatioships_dict[key] = {'seq_id': seq_id, 'species_name': species_name, 'homologous_gene_id': homologous_gene_id, 'homologous_protein_isoforms': homologous_protein_isoforms}
 
             # read the next record
@@ -2497,9 +2497,10 @@ class FormGetProteinIdsHomology(QWidget):
             mmseqs2_protein_isoforms_list = sqllib.get_mmseqs2_protein_isoforms_list(self.comparative_genomics_database_conn, '', [reference_protein_id])
 
             # build the list of protein isoforms identification corresponding to the reference protein identification
-            reference_protein_isoform_ids_list = []
+            reference_protein_isoform_ids_set = set()
             for _, protein_isoform_data in enumerate(mmseqs2_protein_isoforms_list):
-                reference_protein_isoform_ids_list.append(protein_isoform_data['protein_id'])
+                reference_protein_isoform_ids_set.add(protein_isoform_data['protein_id'])
+            reference_protein_isoform_ids_list = sorted(list(reference_protein_isoform_ids_set))
 
             # check if there are items in the list of protein isoforms corresponding to the reference protein identification
             if reference_protein_isoform_ids_list:
@@ -2656,6 +2657,9 @@ class FormGetProteinIdsHomology(QWidget):
                 # set the protein isoform identification list
                 protein_isoform_id_list = homology_relationships_data_dict['protein_isoform_ids'].split('|')
 
+                # set the processed gene identification list
+                processed_gene_id_list = []
+
                 # for each protein isoform identification
                 for protein_isoform_id in sorted(protein_isoform_id_list):
 
@@ -2667,17 +2671,19 @@ class FormGetProteinIdsHomology(QWidget):
                     protein_seq_fasta_file_id.write(f'>{protein_isoform_id}[{homology_relationships_data_dict['species_id']}]\n')
                     protein_seq_fasta_file_id.write(f'{protein_isoform_seq}\n')
 
-                    # print(f"homology_relationships_data_dict['gene_id']: {homology_relationships_data_dict['gene_id']}")
+                    # check if the gene identification is processed
+                    if homology_relationships_data_dict['gene_id'] not in processed_gene_id_list:
 
-                    # get the gene sequence data of protein isoform
-                    gene_seq_dict = sqllib.get_gene_seq_dict(self.sequences_database_conn, homology_relationships_data_dict['gene_id'])
-                    gene_isoform_seq = gene_seq_dict['seq']
+                        # add the gene identification to the the processed gene identification list:
+                        processed_gene_id_list.append(homology_relationships_data_dict['gene_id'])
 
-                    # print(f"gene_isoform_seq: {gene_isoform_seq}")
+                        # get the gene sequence data of protein isoform
+                        gene_seq_dict = sqllib.get_gene_seq_dict(self.sequences_database_conn, homology_relationships_data_dict['gene_id'])
+                        gene_isoform_seq = gene_seq_dict['seq']
 
-                    # write the gene sequence  of the protein isoform in the  the protein FASTA sequence file
-                    gene_seq_fasta_file_id.write(f'>{homology_relationships_data_dict['gene_id']}[{homology_relationships_data_dict['species_id']}]\n')
-                    gene_seq_fasta_file_id.write(f'{gene_isoform_seq}\n')
+                        # write the gene sequence of the protein isoform in the the gene FASTA sequence file
+                        gene_seq_fasta_file_id.write(f'>{homology_relationships_data_dict['gene_id']}[{homology_relationships_data_dict['species_id']}]\n')
+                        gene_seq_fasta_file_id.write(f'{gene_isoform_seq}\n')
 
                 # print the record counters
                 genlib.Message.print('verbose', f'\rHolology relationships records: {homology_relationships_record_counter:5d}')

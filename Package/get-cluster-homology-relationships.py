@@ -243,6 +243,9 @@ def get_homology_relationships(conn, reference_protein_id):
     Get the homology relationships of a protein identification.
     '''
 
+    genlib.Message.print('trace', '='*20)
+    genlib.Message.print('trace', f'reference_protein_id: {reference_protein_id}')
+
     # initialize the homology relationhips dictionary
     homology_relationships_dict = genlib.NestedDefaultDict()
 
@@ -250,9 +253,12 @@ def get_homology_relationships(conn, reference_protein_id):
     mmseqs2_protein_isoforms_list = sqllib.get_mmseqs2_protein_isoforms_list(conn, '', [reference_protein_id])
 
     # build the list of protein isoforms identification corresponding to the reference protein identification
-    reference_protein_isoform_ids_list = []
+    reference_protein_isoform_ids_set = set()
     for _, protein_isoform_data in enumerate(mmseqs2_protein_isoforms_list):
-        reference_protein_isoform_ids_list.append(protein_isoform_data['protein_id'])
+        reference_protein_isoform_ids_set.add(protein_isoform_data['protein_id'])
+    reference_protein_isoform_ids_list = sorted(list(reference_protein_isoform_ids_set))
+    genlib.Message.print('trace', '-'*20)
+    genlib.Message.print('trace', f'reference_protein_isoform_ids_list: {reference_protein_isoform_ids_list}')
 
     # check if there are items in the list of protein isoforms corresponding to the reference protein identification
     if reference_protein_isoform_ids_list:
@@ -264,11 +270,23 @@ def get_homology_relationships(conn, reference_protein_id):
         protein_isoform_ids = '|'.join(sorted(reference_protein_isoform_ids_list))
         homology_relationships_dict[f'{species_id}-{gene_id}'] = {'species_id': species_id, 'species_name': species_name, 'gene_id':gene_id, 'protein_isoform_ids': protein_isoform_ids}
 
+        genlib.Message.print('trace', '-'*20)
+        genlib.Message.print('trace', 'homology_relationships_dict (1):')
+        for key in sorted(homology_relationships_dict):
+            genlib.Message.print('trace', f'    key: {key}')
+            genlib.Message.print('trace', f'    data: {homology_relationships_dict[key]}')
+
         # for each identification in the list of protein isoforms corresponding to the reference protein identification
         for reference_protein_isoform_id in reference_protein_isoform_ids_list:
 
+            genlib.Message.print('trace', '-'*20)
+            genlib.Message.print('trace', f'reference_protein_isoform_id: {reference_protein_isoform_id}')
+
             # get data of the orthologous proteins
             orthologous_protein_data_list = sqllib.get_orthologous_protein_data_list(conn, reference_protein_isoform_id)
+
+            genlib.Message.print('trace', '-')
+            genlib.Message.print('trace', f'orthologous_protein_data_list: {orthologous_protein_data_list}')
 
             # check if there are data of orthologous proteins:
             if orthologous_protein_data_list:
@@ -278,6 +296,12 @@ def get_homology_relationships(conn, reference_protein_id):
                 for item in orthologous_protein_data_list:
                     key = (item['target_species_id'], item['gene_id'])
                     clustered_homologous_proteins_dict[key].append(item['target_protein_id'])
+
+                genlib.Message.print('trace', '-')
+                genlib.Message.print('trace', 'clustered_homologous_proteins_dict:')
+                for key in sorted(clustered_homologous_proteins_dict):
+                    genlib.Message.print('trace', f'    key: {key}')
+                    genlib.Message.print('trace', f'    data: {clustered_homologous_proteins_dict[key]}')
 
                 # build the orthologous data list
                 orthologous_data_list = [
@@ -289,6 +313,9 @@ def get_homology_relationships(conn, reference_protein_id):
                     for (species_id, gene_id), protein_ids_list in clustered_homologous_proteins_dict.items()
                 ]
 
+                genlib.Message.print('trace', '-')
+                genlib.Message.print('trace', f'orthologous_data_list: {orthologous_data_list}')
+
                 # add orthologous data to the homology relationships dictionary
                 for _, data in enumerate(orthologous_data_list):
                     species_id = data['species_id']
@@ -296,6 +323,12 @@ def get_homology_relationships(conn, reference_protein_id):
                     gene_id = data['gene_id']
                     protein_isoform_ids = data['protein_isoform_ids']
                     homology_relationships_dict[f'{species_id}-{gene_id}'] = {'species_id': species_id, 'species_name': species_name, 'gene_id':gene_id, 'protein_isoform_ids': protein_isoform_ids}
+
+    genlib.Message.print('trace', '-'*20)
+    genlib.Message.print('trace', 'homology_relationships_dict (2):')
+    for key in sorted(homology_relationships_dict):
+        genlib.Message.print('trace', f'    key: {key}')
+        genlib.Message.print('trace', f'    data: {homology_relationships_dict[key]}')
 
     # return the homology relationships dictionary
     return homology_relationships_dict

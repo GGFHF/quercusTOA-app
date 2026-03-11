@@ -72,7 +72,7 @@ def get_app_version():
     Get the application version.
     '''
 
-    return '0.20'
+    return '0.21'
 
 #-------------------------------------------------------------------------------
 
@@ -323,6 +323,24 @@ def get_quercus_dentata_name():
 
 #-------------------------------------------------------------------------------
 
+def get_quercus_gilva_code():
+    '''
+    Get the Quercus gilva code.
+    '''
+
+    return 'Qgilva'
+
+#-------------------------------------------------------------------------------
+
+def get_quercus_gilva_name():
+    '''
+    Get the Quercus gilva name.
+    '''
+
+    return 'Quercus gilva'
+
+#-------------------------------------------------------------------------------
+
 def get_quercus_glauca_code():
     '''
     Get the Quercus glauca code.
@@ -374,6 +392,24 @@ def get_quercus_lobata_name():
     '''
 
     return 'Quercus lobata'
+
+#-------------------------------------------------------------------------------
+
+def get_quercus_longispica_code():
+    '''
+    Get the Quercus longispica code.
+    '''
+
+    return 'Qlongispica'
+
+#-------------------------------------------------------------------------------
+
+def get_quercus_longispica_name():
+    '''
+    Get the Quercus longispica name.
+    '''
+
+    return 'Quercus longispica'
 
 #-------------------------------------------------------------------------------
 
@@ -460,12 +496,16 @@ def get_quercus_species_name(quercus_species_code):
         quercus_species_name = get_quercus_acutissima_name()
     elif quercus_species_code == get_quercus_dentata_code():
         quercus_species_name = get_quercus_dentata_name()
+    elif quercus_species_code == get_quercus_gilva_code():
+        quercus_species_name = get_quercus_gilva_name()
     elif quercus_species_code == get_quercus_glauca_code():
         quercus_species_name = get_quercus_glauca_name()
     elif quercus_species_code == get_quercus_ilex_code():
         quercus_species_name = get_quercus_ilex_name()
     elif quercus_species_code == get_quercus_lobata_code():
         quercus_species_name = get_quercus_lobata_name()
+    elif quercus_species_code == get_quercus_longispica_code():
+        quercus_species_name = get_quercus_longispica_name()
     elif quercus_species_code == get_quercus_robur_code():
         quercus_species_name = get_quercus_robur_name()
     elif quercus_species_code == get_quercus_rubra_code():

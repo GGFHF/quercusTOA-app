@@ -675,8 +675,14 @@ def get_orthologous_protein_data_list(conn, reference_protein_id):
     orthologous_protein_data_list = []
 
     # select rows from the table "liftoff_gff_gene_data"
+    # -- sentence = f'''
+    # --             SELECT a.reference_species_id, a.reference_protein_id, a.target_species_id, a.target_protein_id, b.cluster_id, b.gene_id
+    # --             FROM liftoff_homologous_proteins a
+    # --             JOIN  mmseqs2_concatenated_cds_clusters b ON a.target_protein_id = b.protein_id
+    # --             WHERE reference_protein_id = '{reference_protein_id}';
+    # --             '''
     sentence = f'''
-                SELECT a.reference_species_id, a.reference_protein_id, a.target_species_id, a.target_protein_id, b.cluster_id, b.gene_id
+                SELECT DISTINCT a.reference_species_id, a.reference_protein_id, a.target_species_id, a.target_protein_id, b.gene_id
                 FROM liftoff_homologous_proteins a
                 JOIN  mmseqs2_concatenated_cds_clusters b ON a.target_protein_id = b.protein_id
                 WHERE reference_protein_id = '{reference_protein_id}';
@@ -688,7 +694,8 @@ def get_orthologous_protein_data_list(conn, reference_protein_id):
 
     # add row data to the list
     for row in rows:
-        orthologous_protein_data_list.append({'reference_species_id': row[0], 'reference_protein_id': row[1], 'target_species_id': row[2], 'target_protein_id': row[3], 'cluster_id': row[4], 'gene_id': row[5]})
+        # -- orthologous_protein_data_list.append({'reference_species_id': row[0], 'reference_protein_id': row[1], 'target_species_id': row[2], 'target_protein_id': row[3], 'cluster_id': row[4], 'gene_id': row[5]})
+        orthologous_protein_data_list.append({'reference_species_id': row[0], 'reference_protein_id': row[1], 'target_species_id': row[2], 'target_protein_id': row[3], 'gene_id': row[4]})
 
     # return the list
     return orthologous_protein_data_list

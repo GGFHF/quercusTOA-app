@@ -274,6 +274,9 @@ def get_protein_fasta_files(conn, homology_relationships_file, blastp_alignments
                 # set the protein isoform identification list
                 protein_isoform_id_list = homology_relationships_data_dict['protein_isoform_ids'].split('|')
 
+                # set the processed gene identification list
+                processed_gene_id_list = []
+
                 # for each protein isoform identification
                 for protein_isoform_id in protein_isoform_id_list:
 
@@ -285,13 +288,19 @@ def get_protein_fasta_files(conn, homology_relationships_file, blastp_alignments
                     protein_sequence_fasta_file_id.write(f'>{protein_isoform_id}[{homology_relationships_data_dict['species_id']}]\n')
                     protein_sequence_fasta_file_id.write(f'{protein_isoform_seq}\n')
 
-                    # get the gene sequence data of protein isoform
-                    gene_seq_dict = sqllib.get_gene_seq_dict(conn, homology_relationships_data_dict['gene_id'])
-                    gene_isoform_seq = gene_seq_dict['seq']
+                    # check if the gene identification is processed
+                    if homology_relationships_data_dict['gene_id'] not in processed_gene_id_list:
 
-                    # write the gene sequence of the protein isoform in the the gene FASTA sequence file
-                    gene_sequence_fasta_file_id.write(f'>{homology_relationships_data_dict['gene_id']}[{homology_relationships_data_dict['species_id']}]\n')
-                    gene_sequence_fasta_file_id.write(f'{gene_isoform_seq}\n')
+                        # add the gene identification to the the processed gene identification list:
+                        processed_gene_id_list.append(homology_relationships_data_dict['gene_id'])
+
+                        # get the gene sequence data of protein isoform
+                        gene_seq_dict = sqllib.get_gene_seq_dict(conn, homology_relationships_data_dict['gene_id'])
+                        gene_isoform_seq = gene_seq_dict['seq']
+
+                        # write the gene sequence of the protein isoform in the the gene FASTA sequence file
+                        gene_sequence_fasta_file_id.write(f'>{homology_relationships_data_dict['gene_id']}[{homology_relationships_data_dict['species_id']}]\n')
+                        gene_sequence_fasta_file_id.write(f'{gene_isoform_seq}\n')
 
                 # print the record counters
                 genlib.Message.print('verbose', f'\rHolology relationships records: {homology_relationships_record_counter:5d}')

@@ -2,7 +2,7 @@
 
 Functional annotation and comparative genomics tool for oak transcripts and proteins.
 
-Refer to the gymnoTOA-app manual https://github.com/GGFHF/quercusTOA-app/blob/master/Package/quercusTOA-app-manual.pdf
+Refer to the gymnoTOA-app manual (https://github.com/GGFHF/quercusTOA-app/blob/main/Package/quercusTOA-app-manual.pdf)
 for installation instructions, a description of the software and examples of use. Also, you can see the paper:
 
 Mora‐Márquez, F., Hurtado M., & López de Heredia, U. (under review).

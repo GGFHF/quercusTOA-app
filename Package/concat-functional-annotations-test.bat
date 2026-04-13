@@ -47,7 +47,8 @@ rem ----------------------------------------------------------------------------
 rem Execute the program concat-functional-annotations.py
 
 python.exe %PYTHON_OPTIONS% concat-functional-annotations.py ^
-    --db=%DATA_DIR%\quercusTOA.db ^
+    --annotations-db=%DATA_DIR%\functional-annotations.db ^
+    --comparative-db=%DATA_DIR%\comparative-genomics.db ^
     --blastp-alignments=%DATA_DIR%\blastp-Quercus-alignments.csv ^
     --blastx-alignments=%DATA_DIR%\blastx-Quercus-alignments.csv ^
     --blastn-alignments=%DATA_DIR%\blastn-lncRNA-alignments.csv ^

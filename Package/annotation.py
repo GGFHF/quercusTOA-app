@@ -962,8 +962,7 @@ class FormRunAnnotationPipeline(QWidget):
         # get items from dictionary of application configuration
         app_dir = self.app_config_dict['Environment parameters']['app_dir']
         functional_annotations_db_path = self.app_config_dict[f'{genlib.get_app_short_name()} database']['functional_annotations_db_path']
-        qlobata_genome_path = self.app_config_dict[f'{genlib.get_app_short_name()} database']['qlobata_genome_path']
-        qlobata_gff_path = self.app_config_dict[f'{genlib.get_app_short_name()} database']['qlobata_gff_path']
+        comparative_genomics_db_path = self.app_config_dict[f'{genlib.get_app_short_name()} database']['comparative_genomics_db_path']
         quercus_blastplus_db_name = self.app_config_dict[f'{genlib.get_app_short_name()} database']['quercus_blastplus_db_name']
         quercus_blastplus_db_dir = self.app_config_dict[f'{genlib.get_app_short_name()} database']['quercus_blastplus_db_dir']
         quercus_diamond_db_name = self.app_config_dict[f'{genlib.get_app_short_name()} database']['quercus_diamond_db_name']
@@ -981,11 +980,6 @@ class FormRunAnnotationPipeline(QWidget):
         temp_dir = f'{current_run_dir}/temp'
         temp_liftoff_dir = f'{temp_dir}/temp-liftoff'
 
-        #
-        target_gff3_file = f'{temp_dir}/target.gff3'
-        unmapped_features_file = f'{temp_dir}/unmapped-features.txt'
-        transcripts_geneid_file = f'{temp_dir}/transcripts-geneid.csv'
-
         # set the CSV files with alignments
         blastp_clade_alignment_file = f'{temp_dir}/{genlib.get_blastp_clade_alignment_file_name()}'
         blastx_clade_alignment_file = f'{temp_dir}/{genlib.get_blastx_clade_alignment_file_name()}'
@@ -996,8 +990,7 @@ class FormRunAnnotationPipeline(QWidget):
         besthit_functional_annotation_file = f'./{genlib.get_besthit_functional_annotation_file_name()}'
 
         # set the annotation file head
-        # -- head = '1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qlobata_gene_id;interpro_goterms;panther_goterms;metacyc_pathways;reactome_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams'
-        head = '1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qlobata_gene_id;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams'
+        head = '1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qacutissima_homology;qdentata_homology;qgilva_homology;qlobata_homology;qlongispica_homology;qrobur_homology;qrubra_homology;qsuber_homology;qvariabilis_homology;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams'
 
         # set the script path
         script_path = f'{directory}/{script_name}'
@@ -1278,66 +1271,6 @@ class FormRunAnnotationPipeline(QWidget):
                 file_id.write( '    fi\n')
                 file_id.write( '}\n')
                 file_id.write( '#-------------------------------------------------------------------------------\n')
-                file_id.write( 'function align_transcriptome_2_qlobata_genes\n')
-                file_id.write( '{\n')
-                file_id.write( '    echo "$SEP"\n')
-                file_id.write( '    echo "Aligning transcriptome to Quercus lobata genes ..."\n')
-                file_id.write(f'    cd {current_run_dir}\n')
-                file_id.write( '    STEP_STATUS=$STATUS_DIR/align-transcriptome-2-qlobata-genes.ok\n')
-                file_id.write( '    if [ -f $STEP_STATUS ]; then\n')
-                file_id.write( '        echo "This step was previously run."\n')
-                file_id.write( '    else\n')
-                if fasta_type ==  genlib.get_fasta_type_transcripts():
-                    file_id.write(f'        source {miniforge3_bin_dir}/activate {genlib.get_liftoff_environment()}\n')
-                    file_id.write( '        /usr/bin/time \\\n')
-                    file_id.write( '            liftoff \\\n')
-                    file_id.write(f'                -p {threads} \\\n')
-                    file_id.write(f'                -g {qlobata_gff_path} \\\n')
-                    file_id.write(f'                -o {target_gff3_file} \\\n')
-                    file_id.write(f'                -u {unmapped_features_file} \\\n')
-                    file_id.write(f'                -dir {temp_liftoff_dir} \\\n')
-                    file_id.write(f'                {fasta_file} \\\n')
-                    file_id.write(f'                {qlobata_genome_path}\n')
-                    file_id.write( '        RC=$?\n')
-                    file_id.write( '        if [ $RC -ne 0 ]; then manage_error blastn $RC; fi\n')
-                    file_id.write( '        conda deactivate\n')
-                    file_id.write( '        echo "Alignment is done."\n')
-                elif fasta_type ==  genlib.get_fasta_type_proteins():
-                    file_id.write( '        echo "This step is not run with a proteins file."\n')
-                file_id.write( '        touch $STEP_STATUS\n')
-                file_id.write( '    fi\n')
-                file_id.write( '}\n')
-                file_id.write( '#-------------------------------------------------------------------------------\n')
-                file_id.write( 'function get_transcripts_geneid\n')
-                file_id.write( '{\n')
-                file_id.write(f'    cd {current_run_dir}\n')
-                file_id.write( '    STEP_STATUS=$STATUS_DIR/get-transcripts-geneid.ok\n')
-                file_id.write( '    echo "$SEP"\n')
-                file_id.write( '    echo "Getting the gene identification corresponding to transcripts ..."\n')
-                file_id.write( '    if [ -f $STEP_STATUS ]; then\n')
-                file_id.write( '        echo "This step was previously run."\n')
-                file_id.write( '    else\n')
-                if fasta_type ==  genlib.get_fasta_type_transcripts():
-                    file_id.write(f'        source {miniforge3_bin_dir}/activate {genlib.get_liftoff_environment()}\n')
-                    file_id.write( '        /usr/bin/time \\\n')
-                    file_id.write(f'            {app_dir}/get-transcripts-geneid.py \\\n')
-                    file_id.write(f'                --gff={target_gff3_file} \\\n')
-                    file_id.write( '                --format=GFF3 \\\n')
-                    file_id.write(f'                --out={transcripts_geneid_file} \\\n')
-                    file_id.write( '                --verbose=N \\\n')
-                    file_id.write( '                --trace=N \\\n')
-                    file_id.write( '                --tvi=NONE\n')
-                    file_id.write( '        RC=$?\n')
-                    file_id.write( '        if [ $RC -ne 0 ]; then manage_error blastn $RC; fi\n')
-                    file_id.write( '        conda deactivate\n')
-                    file_id.write( '        echo "Gene identifications are gotten."\n')
-                elif fasta_type ==  genlib.get_fasta_type_proteins():
-                    file_id.write(f'        touch {transcripts_geneid_file}\n')
-                    file_id.write( '        echo "This step is not run with a proteins file."\n')
-                file_id.write( '        touch $STEP_STATUS\n')
-                file_id.write( '    fi\n')
-                file_id.write( '}\n')
-                file_id.write( '#-------------------------------------------------------------------------------\n')
                 file_id.write('function concat_functional_annotations\n')
                 file_id.write( '{\n')
                 file_id.write( '    echo "$SEP"\n')
@@ -1350,11 +1283,11 @@ class FormRunAnnotationPipeline(QWidget):
                 file_id.write(f'        source {miniforge3_bin_dir}/activate {genlib.get_quercustoa_env_code()}\n')
                 file_id.write( '        /usr/bin/time \\\n')
                 file_id.write(f'            {app_dir}/concat-functional-annotations.py \\\n')
-                file_id.write(f'                --db={functional_annotations_db_path} \\\n')
+                file_id.write(f'                --annotations-db={functional_annotations_db_path} \\\n')
+                file_id.write(f'                --comparative-db={comparative_genomics_db_path} \\\n')
                 file_id.write(f'                --blastp-alignments={blastp_clade_alignment_file} \\\n')
                 file_id.write(f'                --blastx-alignments={blastx_clade_alignment_file} \\\n')
                 file_id.write(f'                --blastn-alignments={blastn_lncrna_alignment_file} \\\n')
-                file_id.write(f'                --transcripts_geneid={transcripts_geneid_file} \\\n')
                 file_id.write(f'                --complete_annotations={complete_functional_annotation_file} \\\n')
                 file_id.write(f'                --besthit_annotations={besthit_functional_annotation_file} \\\n')
                 file_id.write( '                --verbose=N \\\n')
@@ -1510,8 +1443,6 @@ class FormRunAnnotationPipeline(QWidget):
                 file_id.write( 'align_peptides_2_alignment_tool_quercus_db\n')
                 file_id.write( 'align_transcriptome_2_alignment_tool_quercus_db\n')
                 file_id.write( 'align_transcriptome_2_blastplus_lncrna_db\n')
-                file_id.write( 'align_transcriptome_2_qlobata_genes\n')
-                file_id.write( 'get_transcripts_geneid\n')
                 file_id.write( 'concat_functional_annotations\n')
                 file_id.write( 'sort_functional_annotations\n')
                 file_id.write( 'add_heads\n')
@@ -3154,11 +3085,18 @@ class FormBrowseAnnotationResults(QWidget):
             protein_species = data_dict['protein_species']
             tair10_ortholog_seq_id = data_dict['tair10_ortholog_seq_id']
             tair10_description =  data_dict['tair10_description']
-            qlobata_gene_id = data_dict['qlobata_gene_id']
+            qacutissima_homology = data_dict['qacutissima_homology']
+            qdentata_homology = data_dict['qdentata_homology']
+            qgilva_homology = data_dict['qgilva_homology']
+            qlobata_homology = data_dict['qlobata_homology']
+            qlongispica_homology = data_dict['qlongispica_homology']
+            qrobur_homology = data_dict['qrobur_homology']
+            qrubra_homology = data_dict['qrubra_homology']
+            qsuber_homology = data_dict['qsuber_homology']
+            qvariabilis_homology = data_dict['qvariabilis_homology']
             interpro_goterms = data_dict['interpro_goterms']
             panther_goterms = data_dict['panther_goterms']
             metacyc_pathways = data_dict['metacyc_pathways']
-            # -- reactome_pathways = data_dict['reactome_pathways']
             eggnog_ortholog_seq_id = data_dict['eggnog_ortholog_seq_id']
             eggnog_ortholog_species = data_dict['eggnog_ortholog_species']
             eggnog_ogs = data_dict['eggnog_ogs']
@@ -3180,15 +3118,13 @@ class FormBrowseAnnotationResults(QWidget):
             key = f'{qseqid}-{sseqid}'
 
             # add data to the dictionary
-            # -- functional_annotation_dict[key] = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'length': length, 'mismatch': mismatch, 'gapopen': gapopen, 'qstart': qstart, 'qend': qend, 'sstart': sstart, 'send': send, 'evalue': evalue, 'bitscore': bitscore, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description, 'qlobata_gene_id': qlobata_gene_id, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'reactome_pathways': reactome_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
-            functional_annotation_dict[key] = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'evalue': evalue, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description, 'qlobata_gene_id': qlobata_gene_id, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
+            functional_annotation_dict[key] = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'evalue': evalue, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description, 'qacutissima_homology': qacutissima_homology, 'qdentata_homology': qdentata_homology, 'qgilva_homology': qgilva_homology, 'qlobata_homology': qlobata_homology, 'qlongispica_homology': qlongispica_homology, 'qrobur_homology': qrobur_homology, 'qrubra_homology': qrubra_homology, 'qsuber_homology': qsuber_homology, 'qvariabilis_homology': qvariabilis_homology, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
 
             # read the next record
             (record, key, data_dict) = genlib.read_functional_annotation_record(functional_annotation_file, functional_annotation_file_id, annotation_counter)
 
         # build the data list
-        # -- data_list = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore', 'algorithm', 'protein_description', 'protein_species', 'tair10_ortholog_seq_id', 'tair10_description', ' 'qlobata_gene_id', 'interpro_goterms', 'panther_goterms', 'metacyc_pathways', 'reactome_pathways', 'eggnog_ortholog_seq_id', 'eggnog_ortholog_species', 'eggnog_ogs', 'cog_category', 'eggnog_description', 'eggnog_goterms', 'ec', 'kegg_kos', 'kegg_pathways', 'kegg_modules', 'kegg_reactions', 'kegg_rclasses', 'brite', 'kegg_tc', 'cazy', 'pfams']
-        data_list = ['qseqid', 'sseqid', 'pident', 'evalue', 'algorithm', 'protein_description', 'protein_species', 'tair10_ortholog_seq_id', 'tair10_description', 'qlobata_gene_id', 'interpro_goterms', 'panther_goterms', 'metacyc_pathways', 'eggnog_ortholog_seq_id', 'eggnog_ortholog_species', 'eggnog_ogs', 'cog_category', 'eggnog_description', 'eggnog_goterms', 'ec', 'kegg_kos', 'kegg_pathways', 'kegg_modules', 'kegg_reactions', 'kegg_rclasses', 'brite', 'kegg_tc', 'cazy', 'pfams']
+        data_list = ['qseqid', 'sseqid', 'pident', 'evalue', 'algorithm', 'protein_description', 'protein_species', 'tair10_ortholog_seq_id', 'tair10_description', 'qacutissima_homology', 'qdentata_homology', 'qgilva_homology', 'qlobata_homology', 'qlongispica_homology', 'qrobur_homology', 'qrubra_homology', 'qsuber_homology', 'qvariabilis_homology', 'interpro_goterms', 'panther_goterms', 'metacyc_pathways', 'eggnog_ortholog_seq_id', 'eggnog_ortholog_species', 'eggnog_ogs', 'cog_category', 'eggnog_description', 'eggnog_goterms', 'ec', 'kegg_kos', 'kegg_pathways', 'kegg_modules', 'kegg_reactions', 'kegg_rclasses', 'brite', 'kegg_tc', 'cazy', 'pfams']
 
         # build the data dictionary
         data_dict = {}
@@ -3209,11 +3145,18 @@ class FormBrowseAnnotationResults(QWidget):
         data_dict['protein_species'] = {'text': 'Species', 'width': 200, 'alignment': 'left'}
         data_dict['tair10_ortholog_seq_id'] = {'text': 'TAIR10 orth. seq. id', 'width': 180, 'alignment': 'left'}
         data_dict['tair10_description'] = {'text': 'TAIR10 description', 'width': 400, 'alignment': 'left'}
-        data_dict['qlobata_gene_id'] = {'text': 'Q. lobata gene id', 'width': 180, 'alignment': 'left'}
+        data_dict['qacutissima_homology'] = {'text': 'Q. acutissima homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qdentata_homology'] = {'text': 'Q. dentata homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qgilva_homology'] = {'text': 'Q. gilva homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qlobata_homology'] = {'text': 'Q. lobata homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qlongispica_homology'] = {'text': 'Q. longispica homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qrobur_homology'] = {'text': 'Q. robur homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qrubra_homology'] = {'text': 'Q. rubra homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qsuber_homology'] = {'text': 'Q. suber homology', 'width': 280, 'alignment': 'left'}
+        data_dict['qvariabilis_homology'] = {'text': 'Q. variabilis homology', 'width': 280, 'alignment': 'left'}
         data_dict['interpro_goterms'] = {'text': 'Interpro GOterms', 'width': 280, 'alignment': 'left'}
         data_dict['panther_goterms'] = {'text': 'Panther GOterms', 'width': 280, 'alignment': 'left'}
         data_dict['metacyc_pathways'] = {'text': 'Metacyc pathways', 'width': 280, 'alignment': 'left'}
-        # -- data_dict['reactome_pathways'] = {'text': 'reactome_pathways', 'width': 280, 'alignment': 'left'}
         data_dict['eggnog_ortholog_seq_id'] = {'text': 'eggNOG orth. seq. id', 'width': 180, 'alignment': 'left'}
         data_dict['eggnog_ortholog_species'] = {'text': 'eggNOG orth. species', 'width': 200, 'alignment': 'left'}
         data_dict['eggnog_ogs'] = {'text': 'eggNOG OGs', 'width': 400, 'alignment': 'left'}

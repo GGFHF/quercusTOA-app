@@ -29,8 +29,9 @@ Licence: GNU General Public Licence Version 3.
 import argparse
 import gzip
 import os
-import re
 import sys
+
+from collections import defaultdict
 
 import genlib
 import sqllib
@@ -50,11 +51,14 @@ def main():
     args = parser.parse_args()
     check_args(args)
 
-    # connect to the quercusTOA database
-    conn = sqllib.connect_database(args.quercustoa_database)
+    # connect to the quercusTOA functional annotations database
+    conn = sqllib.connect_database(args.functional_annotations_database)
+
+    # attach to the quercusTOA comparative genomics database
+    sqllib.attach_database(conn, 'comparative_genomics_database', args.comparative_genomics_database)
 
     # concat functional annotations corresponding to the BLAST+ alignments
-    concat_functional_annotations(conn, args.blastp_clade_alignment_file, args.blastx_clade_alignment_file, args.blastn_lncrna_alignment_file, args.transcripts_geneid_file, args.complete_functional_annotation_file, args.besthit_functional_annotation_file)
+    concat_functional_annotations(conn, args.blastp_clade_alignment_file, args.blastx_clade_alignment_file, args.blastn_lncrna_alignment_file, args.complete_functional_annotation_file, args.besthit_functional_annotation_file)
 
     # close connection to quercusTOA database
     conn.close()
@@ -73,11 +77,11 @@ def build_parser():
     usage = f'\r{text.ljust(len("usage:"))}\nUsage: {os.path.basename(__file__)} arguments'
     parser = argparse.ArgumentParser(usage=usage)
     parser._optionals.title = 'Arguments'    #pylint: disable=protected-access
-    parser.add_argument('--db', dest='quercustoa_database', help=f'Path of the {genlib.get_app_short_name} database (mandatory).')
+    parser.add_argument('--annotations-db', dest='functional_annotations_database', help=f'Path of the {genlib.get_app_short_name} functional annotations database (mandatory).')
+    parser.add_argument('--comparative-db', dest='comparative_genomics_database', help=f'Path of the {genlib.get_app_short_name} comparative genomics database (mandatory).')
     parser.add_argument('--blastp-alignments', dest='blastp_clade_alignment_file', help='Path of the clade alignment file yielded by blastp (mandatory).')
     parser.add_argument('--blastx-alignments', dest='blastx_clade_alignment_file', help='Path of the clade alignment file yielded by blastp (mandatory).')
     parser.add_argument('--blastn-alignments', dest='blastn_lncrna_alignment_file', help='Path of the lncRNA alignment file yielded by blastn (mandatory).')
-    parser.add_argument('--transcripts_geneid', dest='transcripts_geneid_file', help='Path of the file with transcripts gene identifications (mandatory).')
     parser.add_argument('--complete_annotations', dest='complete_functional_annotation_file', help='Path of the functional annotation file with all hits per sequence (mandatory).')
     parser.add_argument('--besthit_annotations', dest='besthit_functional_annotation_file', help='Path of the functional annotation file with the best hit per sequence (mandatory).')
     parser.add_argument('--verbose', dest='verbose', help=f'Additional job status info during the run: {genlib.get_verbose_code_list_text()}; default: {genlib.Const.DEFAULT_VERBOSE}.')
@@ -96,12 +100,20 @@ def check_args(args):
     # initialize the control variable
     OK = True
 
-    # check "quercustoa_database"
-    if args.quercustoa_database is None:
-        genlib.Message.print('error', f'*** The {genlib.get_app_short_name} database is not indicated in the input arguments.')
+    # check "functional_annotations_database"
+    if args.functional_annotations_database is None:
+        genlib.Message.print('error', f'*** The {genlib.get_app_short_name} functional annotations database is not indicated in the input arguments.')
         OK = False
-    elif not os.path.isfile(args.quercustoa_database):
-        genlib.Message.print('error', f'*** The file {args.quercustoa_database} does not exist.')
+    elif not os.path.isfile(args.functional_annotations_database):
+        genlib.Message.print('error', f'*** The file {args.functional_annotations_database} does not exist.')
+        OK = False
+
+    # check "comparative_genomics_database"
+    if args.comparative_genomics_database is None:
+        genlib.Message.print('error', f'*** The {genlib.get_app_short_name} comparative genomics database is not indicated in the input arguments.')
+        OK = False
+    elif not os.path.isfile(args.comparative_genomics_database):
+        genlib.Message.print('error', f'*** The file {args.comparative_genomics_database} does not exist.')
         OK = False
 
     # check "blastp_clade_alignment_file"
@@ -126,14 +138,6 @@ def check_args(args):
         OK = False
     elif not os.path.isfile(args.blastn_lncrna_alignment_file):
         genlib.Message.print('error', f'*** The file {args.blastn_lncrna_alignment_file} does not exist.')
-        OK = False
-
-    # check "transcripts_geneid_file"
-    if args.transcripts_geneid_file is None:
-        genlib.Message.print('error', '*** The input file with transcripts gene identifications is not indicated in the input arguments.')
-        OK = False
-    elif not os.path.isfile(args.transcripts_geneid_file):
-        genlib.Message.print('error', f'*** The file {args.transcripts_geneid_file} does not exist.')
         OK = False
 
     # check "complete_functional_annotation_file"
@@ -170,16 +174,16 @@ def check_args(args):
 
 #-------------------------------------------------------------------------------
 
-def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clade_alignment_file, blastn_lncrna_alignment_file, transcripts_geneid_file, complete_functional_annotation_file, besthit_functional_annotation_file):
+def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clade_alignment_file, blastn_lncrna_alignment_file, complete_functional_annotation_file, besthit_functional_annotation_file):
     '''
     Concat functional annotations corresponding to the BLAST+ alignments.
     '''
 
+    # initialize the protein data dictionary
+    protein_data_dictionary = genlib.NestedDefaultDict()
+
     # initialize the set of sequence identifications aligned
     qseqid_set = set()
-
-    # build the dictionary of transcripts gene identification
-    transcripts_geneid_dict = build_transcripts_geneid_dict(transcripts_geneid_file)
 
     # open the functional annotation file with all hits per sequence
     if complete_functional_annotation_file.endswith('.gz'):
@@ -263,6 +267,8 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
             bitscore = blastp_clade_alignment_data_dict['bitscore']
             algorithm = 'blastp'
 
+            genlib.Message.print('verbose', f'... {algorithm} - qseqid: {qseqid} - sseqid: {sseqid} ...')
+
             # get the most frecuent species in sseqid
             (protein_description, protein_species) = sqllib.get_mmseqs2_seq_mf_data(conn, sseqid)
 
@@ -272,15 +278,63 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
             # get the description of TAIR10 ortholog sequence identification
             tair10_description = sqllib.get_tair10_peptide_description(conn, tair10_ortholog_seq_id).replace(';','')
 
-            # get the Quercus lobate gene identification
-            qlobata_gene_id = transcripts_geneid_dict.get(qseqid, '-')
+            # get the list of related protein identifications
+            related_protein_id_list = []
+            cluster_relationships_dict = sqllib.get_mmseqs2_protein_clusters_dict(conn, sseqid)
+            for key, data in cluster_relationships_dict.items():
+                related_protein_id_list.append(data['seq_id'])
+
+            # initialize the species data dictionary
+            species_data_dictionary = {}
+
+            # for each related protein identification
+            for related_protein_id in related_protein_id_list:
+
+                # get homology relationships dictionary
+                homology_relationships_dict = protein_data_dictionary.get(related_protein_id, {})
+                if  homology_relationships_dict == {}:
+                    (homology_relationships_dict) = get_homology_relationships(conn, related_protein_id)
+                    protein_data_dictionary[related_protein_id] = homology_relationships_dict
+
+                # get the homology relationships for each species
+                for key in sorted(homology_relationships_dict):
+                    data = homology_relationships_dict[key]
+                    species_id = data['species_id']
+                    gene_id = data['gene_id']
+                    protein_isoform_ids = data['protein_isoform_ids']
+                    new_species_data = f'{gene_id}({protein_isoform_ids})'
+                    species_data = species_data_dictionary.get(species_id, '')
+                    if species_data == '':
+                        species_data_dictionary[species_id] = new_species_data
+                    else:
+                        gene_start = species_data.find(gene_id)
+                        if gene_start == -1:
+                            species_data_dictionary[species_id] = f'{species_data}|||{gene_id}({protein_isoform_ids})'
+                        else:
+                            i = species_data.find('(', gene_start)
+                            j = species_data.find(')', gene_start)
+                            old_protein_isoform_ids = species_data[i + 1:j]
+                            old_protein_isoform_id_set = set(old_protein_isoform_ids.split('|'))
+                            protein_isoform_id_set = set(protein_isoform_ids.split('|'))
+                            new_protein_isoform_ids = '|'.join(sorted(old_protein_isoform_id_set | protein_isoform_id_set))
+                            species_data_dictionary[species_id] = f'{species_data[:i + 1]}{new_protein_isoform_ids}{species_data[j + 1:]})'
+
+            # get species homology
+            qacutissima_homology = species_data_dictionary.get('Qacutissima', '-')
+            qdentata_homology = species_data_dictionary.get('Qdentata', '-')
+            qgilva_homology = species_data_dictionary.get('Qgilva', '-')
+            qlobata_homology = species_data_dictionary.get('Qlobata', '-')
+            qlongispica_homology = species_data_dictionary.get('Qlongispica', '-')
+            qrobur_homology = species_data_dictionary.get('Qrobur', '-')
+            qrubra_homology = species_data_dictionary.get('Qrubra', '-')
+            qsuber_homology = species_data_dictionary.get('Qsuber', '-')
+            qvariabilis_homology = species_data_dictionary.get('Qvariabilis', '-')
 
             # get InterproScan functional annotations data
             interproscan_annotation_dict = sqllib.get_interproscan_annotation_dict(conn, sseqid)
             interpro_goterms = interproscan_annotation_dict.get('interpro_goterms', '-')
             panther_goterms = interproscan_annotation_dict.get('panther_goterms', '-')
             metacyc_pathways = interproscan_annotation_dict.get('metacyc_pathways', '-')
-            # -- reactome_pathways = annotations_dict.get('reactome_pathways', '-')
 
             # get eggNOG-mapper functional annotations data
             emapper_annotation_dict = sqllib.get_emapper_annotation_dict(conn, sseqid)
@@ -302,8 +356,7 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
             pfams = emapper_annotation_dict.get('pfams', '-')
 
             # write record of the functional annotation file with all hits per sequence
-            # -- functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qlobata_gene_id};{interpro_goterms};{panther_goterms};{metacyc_pathways};{reactome_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
-            functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qlobata_gene_id};{interpro_goterms};{panther_goterms};{metacyc_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
+            functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qacutissima_homology};{qdentata_homology};{qgilva_homology};{qlobata_homology};{qlongispica_homology};{qrobur_homology};{qrubra_homology};{qsuber_homology};{qvariabilis_homology};{interpro_goterms};{panther_goterms};{metacyc_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
             complete_functional_annotation_file_id.write(f'{functional_annotation_record}\n')
 
             # add 1 to the counter of records written in the functional annotation file with all hits per sequence
@@ -387,6 +440,8 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
             bitscore = blastx_clade_alignment_data_dict['bitscore']
             algorithm = 'blastx'
 
+            genlib.Message.print('verbose', f'... {algorithm} - qseqid: {qseqid} - sseqid: {sseqid} ...')
+
             # when the "old" sequence identification is not in the sequence identification set
             if old_qseqid not in qseqid_set:
 
@@ -399,15 +454,63 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
                 # get the description of TAIR10 ortholog sequence identification
                 tair10_description = sqllib.get_tair10_peptide_description(conn, tair10_ortholog_seq_id).replace(';','')
 
-                # get the Quercus lobate gene identification
-                qlobata_gene_id = transcripts_geneid_dict.get(qseqid, '-')
+                # get the list of related protein identifications
+                related_protein_id_list = []
+                cluster_relationships_dict = sqllib.get_mmseqs2_protein_clusters_dict(conn, sseqid)
+                for key, data in cluster_relationships_dict.items():
+                    related_protein_id_list.append(data['seq_id'])
+
+                # initialize the species data dictionary
+                species_data_dictionary = {}
+
+                # for each related protein identification
+                for related_protein_id in related_protein_id_list:
+
+                    # get homology relationships dictionary
+                    homology_relationships_dict = protein_data_dictionary.get(related_protein_id, {})
+                    if  homology_relationships_dict == {}:
+                        (homology_relationships_dict) = get_homology_relationships(conn, related_protein_id)
+                        protein_data_dictionary[related_protein_id] = homology_relationships_dict
+
+                    # get the homology relationships for each species
+                    for key in sorted(homology_relationships_dict):
+                        data = homology_relationships_dict[key]
+                        species_id = data['species_id']
+                        gene_id = data['gene_id']
+                        protein_isoform_ids = data['protein_isoform_ids']
+                        new_species_data = f'{gene_id}({protein_isoform_ids})'
+                        species_data = species_data_dictionary.get(species_id, '')
+                        if species_data == '':
+                            species_data_dictionary[species_id] = new_species_data
+                        else:
+                            gene_start = species_data.find(gene_id)
+                            if gene_start == -1:
+                                species_data_dictionary[species_id] = f'{species_data}|||{gene_id}({protein_isoform_ids})'
+                            else:
+                                i = species_data.find('(', gene_start)
+                                j = species_data.find(')', gene_start)
+                                old_protein_isoform_ids = species_data[i + 1:j]
+                                old_protein_isoform_id_set = set(old_protein_isoform_ids.split('|'))
+                                protein_isoform_id_set = set(protein_isoform_ids.split('|'))
+                                new_protein_isoform_ids = '|'.join(sorted(old_protein_isoform_id_set | protein_isoform_id_set))
+                                species_data_dictionary[species_id] = f'{species_data[:i + 1]}{new_protein_isoform_ids}{species_data[j + 1:]})'
+
+                # get species homology
+                qacutissima_homology = species_data_dictionary.get('Qacutissima', '-')
+                qdentata_homology = species_data_dictionary.get('Qdentata', '-')
+                qgilva_homology = species_data_dictionary.get('Qgilva', '-')
+                qlobata_homology = species_data_dictionary.get('Qlobata', '-')
+                qlongispica_homology = species_data_dictionary.get('Qlongispica', '-')
+                qrobur_homology = species_data_dictionary.get('Qrobur', '-')
+                qrubra_homology = species_data_dictionary.get('Qrubra', '-')
+                qsuber_homology = species_data_dictionary.get('Qsuber', '-')
+                qvariabilis_homology = species_data_dictionary.get('Qvariabilis', '-')
 
                 # get InterproScan functional annotations data
                 interproscan_annotation_dict = sqllib.get_interproscan_annotation_dict(conn, sseqid)
                 interpro_goterms = interproscan_annotation_dict.get('interpro_goterms', '-')
                 panther_goterms = interproscan_annotation_dict.get('panther_goterms', '-')
                 metacyc_pathways = interproscan_annotation_dict.get('metacyc_pathways', '-')
-                # -- reactome_pathways = annotations_dict.get('reactome_pathways', '-')
 
                 # get eggNOG-mapper functional annotations data
                 emapper_annotation_dict = sqllib.get_emapper_annotation_dict(conn, sseqid)
@@ -429,8 +532,7 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
                 pfams = emapper_annotation_dict.get('pfams', '-')
 
                 # write record of the functional annotation file with all hits per sequence
-                # -- functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qlobata_gene_id};{interpro_goterms};{panther_goterms};{metacyc_pathways};{reactome_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
-                functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qlobata_gene_id};{interpro_goterms};{panther_goterms};{metacyc_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
+                functional_annotation_record = f'{qseqid};{sseqid};{pident};{length};{mismatch};{gapopen};{qstart};{qend};{sstart};{send};{evalue};{bitscore};{algorithm};{protein_description};{protein_species};{tair10_ortholog_seq_id};{tair10_description};{qacutissima_homology};{qdentata_homology};{qgilva_homology};{qlobata_homology};{qlongispica_homology};{qrobur_homology};{qrubra_homology};{qsuber_homology};{qvariabilis_homology};{interpro_goterms};{panther_goterms};{metacyc_pathways};{eggnog_ortholog_seq_id};{eggnog_ortholog_species};{eggnog_ogs};{cog_category};{eggnog_description};{eggnog_goterms};{ec};{kegg_kos};{kegg_pathways};{kegg_modules};{kegg_reactions};{kegg_rclasses};{brite};{kegg_tc};{cazy};{pfams}'
                 complete_functional_annotation_file_id.write(f'{functional_annotation_record}\n')
 
                 # add 1 to the counter of records written in the functional annotation file with all hits per sequence
@@ -493,6 +595,8 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
         qseqid = blastn_lncrna_alignment_data_dict['qseqid']
         algorithm = 'blastn'
 
+        genlib.Message.print('verbose', f'... {algorithm} - qseqid: {qseqid} ...')
+
         # when the sequence identification is not in the sequence identification set
         if qseqid not in qseqid_set:
 
@@ -500,8 +604,7 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
             qseqid_set.add(qseqid)
 
             # write record in the functional annotation files
-            # -- functional_annotation_record = f'{qseqid};{genlib.get_potential_lncrn()};-;-;-;-;-;-;-;-;-;-;{algorithm};-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-'
-            functional_annotation_record = f'{qseqid};{genlib.get_potential_lncrn()};-;-;-;-;-;-;-;-;-;-;{algorithm};-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-'
+            functional_annotation_record = f'{qseqid};{genlib.get_potential_lncrn()};-;-;-;-;-;-;-;-;-;-;{algorithm};-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-'
             complete_functional_annotation_file_id.write(f'{functional_annotation_record}\n')
             besthit_functional_annotation_file_id.write(f'{functional_annotation_record}\n')
 
@@ -530,74 +633,100 @@ def concat_functional_annotations(conn, blastp_clade_alignment_file, blastx_clad
 
 #-------------------------------------------------------------------------------
 
-def build_transcripts_geneid_dict(transcripts_geneid_file):
+def get_homology_relationships(conn, reference_protein_id):
     '''
-    Build the dictionary of transcripts gene identification.
+    Get the homology relationships of a protein identification.
     '''
 
-    # initialize the dictionary of transcripts gene identification
-    transcripts_geneid_dict = {}
+    genlib.Message.print('trace', '='*20)
+    genlib.Message.print('trace', f'reference_protein_id: {reference_protein_id}')
 
-    # initialize the identification counter
-    id_counter = 0
+    # initialize the homology relationhips dictionary
+    homology_relationships_dict = genlib.NestedDefaultDict()
 
-    # open the file of transcripts gene identification
-    if transcripts_geneid_file.endswith('.gz'):
-        try:
-            transcripts_geneid_file_id = gzip.open(transcripts_geneid_file, mode='rt', encoding='iso-8859-1')
-        except Exception as e:
-            raise genlib.ProgramException(e, 'F002', transcripts_geneid_file)
-    else:
-        try:
-            transcripts_geneid_file_id = open(transcripts_geneid_file, mode='r', encoding='iso-8859-1')
-        except Exception as e:
-            raise genlib.ProgramException(e, 'F001', transcripts_geneid_file)
+    # get the list of protein isoforms corresponding to the reference protein identification
+    mmseqs2_protein_isoforms_list = sqllib.get_mmseqs2_protein_isoforms_list(conn, '', [reference_protein_id])
 
-    # initialize the head control
-    head = True
+    # build the list of protein isoforms identification corresponding to the reference protein identification
+    reference_protein_isoform_ids_set = set()
+    for _, protein_isoform_data in enumerate(mmseqs2_protein_isoforms_list):
+        reference_protein_isoform_ids_set.add(protein_isoform_data['protein_id'])
+    reference_protein_isoform_ids_list = sorted(list(reference_protein_isoform_ids_set))
+    genlib.Message.print('trace', '-'*20)
+    genlib.Message.print('trace', f'reference_protein_isoform_ids_list: {reference_protein_isoform_ids_list}')
 
-    # read the first record
-    record = transcripts_geneid_file_id.readline()
+    # check if there are items in the list of protein isoforms corresponding to the reference protein identification
+    if reference_protein_isoform_ids_list:
 
-    # while there are records
-    while record != '':
+        # add data of reference protein to the homology relationships dictionary
+        species_id = mmseqs2_protein_isoforms_list[0]['species_id']
+        species_name = genlib.get_quercus_species_name(species_id)
+        gene_id = mmseqs2_protein_isoforms_list[0]['gene_id']
+        protein_isoform_ids = '|'.join(sorted(reference_protein_isoform_ids_list))
+        homology_relationships_dict[f'{species_id}-{gene_id}'] = {'species_id': species_id, 'species_name': species_name, 'gene_id':gene_id, 'protein_isoform_ids': protein_isoform_ids}
 
-        # when head record
-        if head:
-            head = False
+        genlib.Message.print('trace', '-'*20)
+        genlib.Message.print('trace', 'homology_relationships_dict (1):')
+        for key in sorted(homology_relationships_dict):
+            genlib.Message.print('trace', f'    key: {key}')
+            genlib.Message.print('trace', f'    data: {homology_relationships_dict[key]}')
 
-        # when data records
-        else:
+        # for each identification in the list of protein isoforms corresponding to the reference protein identification
+        for reference_protein_isoform_id in reference_protein_isoform_ids_list:
 
-            # extract data
-            # record format: seq_id <field_sep> gene_id
-            field_sep = ';'
-            record_sep = '\n'
-            data_list = re.split(field_sep, record.replace(record_sep,''))
-            try:
-                seq_id = data_list[0].strip()
-                gene_id = data_list[1].strip()
-            except Exception as e:
-                raise genlib.ProgramException(e, 'F006', os.path.basename(transcripts_geneid_file), id_counter + 1) from e
+            genlib.Message.print('trace', '-'*20)
+            genlib.Message.print('trace', f'reference_protein_isoform_id: {reference_protein_isoform_id}')
 
-            # add gene identification to the dictionary
-            transcripts_geneid_dict[seq_id] = gene_id
+            # get data of the orthologous proteins
+            orthologous_protein_data_list = sqllib.get_orthologous_protein_data_list(conn, reference_protein_isoform_id)
 
-            # add 1 to the identification counter
-            id_counter += 1
-            genlib.Message.print('verbose', f'\rIdentifications ... {id_counter}')
+            genlib.Message.print('trace', '-')
+            genlib.Message.print('trace', f'orthologous_protein_data_list: {orthologous_protein_data_list}')
 
-        # read the next record
-        record = transcripts_geneid_file_id.readline()
+            # check if there are data of orthologous proteins:
+            if orthologous_protein_data_list:
 
-    genlib.Message.print('verbose', '\n')
+                # cluster the list of target orthologous proteins by species identification and gene identification
+                clustered_homologous_proteins_dict = defaultdict(list)
+                for item in orthologous_protein_data_list:
+                    key = (item['target_species_id'], item['gene_id'])
+                    clustered_homologous_proteins_dict[key].append(item['target_protein_id'])
 
-    # close file
-    transcripts_geneid_file_id.close()
+                genlib.Message.print('trace', '-')
+                genlib.Message.print('trace', 'clustered_homologous_proteins_dict:')
+                for key in sorted(clustered_homologous_proteins_dict):
+                    genlib.Message.print('trace', f'    key: {key}')
+                    genlib.Message.print('trace', f'    data: {clustered_homologous_proteins_dict[key]}')
 
+                # build the orthologous data list
+                orthologous_data_list = [
+                    {
+                        'species_id': species_id,
+                        'gene_id': gene_id,
+                        'protein_isoform_ids': '|'.join(sorted(protein_ids_list))
+                    }
+                    for (species_id, gene_id), protein_ids_list in clustered_homologous_proteins_dict.items()
+                ]
 
-    # return the dictionary of transcripts gene identification
-    return transcripts_geneid_dict
+                genlib.Message.print('trace', '-')
+                genlib.Message.print('trace', f'orthologous_data_list: {orthologous_data_list}')
+
+                # add orthologous data to the homology relationships dictionary
+                for _, data in enumerate(orthologous_data_list):
+                    species_id = data['species_id']
+                    species_name = genlib.get_quercus_species_name(species_id)
+                    gene_id = data['gene_id']
+                    protein_isoform_ids = data['protein_isoform_ids']
+                    homology_relationships_dict[f'{species_id}-{gene_id}'] = {'species_id': species_id, 'species_name': species_name, 'gene_id':gene_id, 'protein_isoform_ids': protein_isoform_ids}
+
+    genlib.Message.print('trace', '-'*20)
+    genlib.Message.print('trace', 'homology_relationships_dict (2):')
+    for key in sorted(homology_relationships_dict):
+        genlib.Message.print('trace', f'    key: {key}')
+        genlib.Message.print('trace', f'    data: {homology_relationships_dict[key]}')
+
+    # return the homology relationships dictionary
+    return homology_relationships_dict
 
 #-------------------------------------------------------------------------------
 

@@ -72,7 +72,7 @@ def get_app_version():
     Get the application version.
     '''
 
-    return '0.21'
+    return '0.22'
 
 #-------------------------------------------------------------------------------
 
@@ -2036,8 +2036,7 @@ def read_functional_annotation_record(file_name, file_id, record_counter):
     if record != '':
 
         # extract data
-        # record format (old):  qseqid <field_sep> sseqid <field_sep> pident <field_sep> length <field_sep> mismatch <field_sep> gapopen <field_sep> qstart <field_sep> qend <field_sep> sstart <field_sep> send <field_sep> evalue <field_sep> bitscore <field_sep> algorithm <field_sep> protein_description <field_sep> protein_species <field_sep> tair10_ortholog_seq_id <field_sep> tair10_description <field_sep> qlobata_gene_id <field_sep> interpro_goterms <field_sep> panther_goterms <field_sep> metacyc_pathways <field_sep> reactome_pathways <field_sep> eggnog_ortholog_seq_id <field_sep> eggnog_ortholog_species <field_sep> eggnog_ogs <field_sep> cog_category <field_sep> eggnog_description <field_sep> eggnog_goterms <field_sep> ec <field_sep> kegg_kos <field_sep> kegg_pathways <field_sep> kegg_modules <field_sep> kegg_reactions <field_sep> kegg_rclasses <field_sep> brite <field_sep> kegg_tc <field_sep> cazy <field_sep> pfams
-        # record format: qseqid <field_sep> sseqid <field_sep> pident <field_sep> length <field_sep> mismatch <field_sep> gapopen <field_sep> qstart <field_sep> qend <field_sep> sstart <field_sep> send <field_sep> evalue <field_sep> bitscore <field_sep> algorithm <field_sep> protein_description <field_sep> protein_species <field_sep> tair10_ortholog_seq_id <field_sep> tair10_description <field_sep> qlobata_gene_id <field_sep> interpro_goterms <field_sep> panther_goterms <field_sep> metacyc_pathways <field_sep> eggnog_ortholog_seq_id <field_sep> eggnog_ortholog_species <field_sep> eggnog_ogs <field_sep> cog_category <field_sep> eggnog_description <field_sep> eggnog_goterms <field_sep> ec <field_sep> kegg_kos <field_sep> kegg_pathways <field_sep> kegg_modules <field_sep> kegg_reactions <field_sep> kegg_rclasses <field_sep> brite <field_sep> kegg_tc <field_sep> cazy <field_sep> pfams
+        # record format: qseqid <field_sep> sseqid <field_sep> pident <field_sep> length <field_sep> mismatch <field_sep> gapopen <field_sep> qstart <field_sep> qend <field_sep> sstart <field_sep> send <field_sep> evalue <field_sep> bitscore <field_sep> algorithm <field_sep> protein_description <field_sep> protein_species <field_sep> tair10_ortholog_seq_id <field_sep> tair10_description <field_sep> qacutissima_homology <field_sep> qdentata_homology <field_sep> qgilva_homology <field_sep> qlobata_homology <field_sep> qlongispica_homology <field_sep> qrobur_homology <field_sep> qrubra_homology <field_sep> qsuber_homology <field_sep> qvariabilis_homology <field_sep> interpro_goterms <field_sep> panther_goterms <field_sep> metacyc_pathways <field_sep> eggnog_ortholog_seq_id <field_sep> eggnog_ortholog_species <field_sep> eggnog_ogs <field_sep> cog_category <field_sep> eggnog_description <field_sep> eggnog_goterms <field_sep> ec <field_sep> kegg_kos <field_sep> kegg_pathways <field_sep> kegg_modules <field_sep> kegg_reactions <field_sep> kegg_rclasses <field_sep> brite <field_sep> kegg_tc <field_sep> cazy <field_sep> pfams
         field_sep = ';'
         record_sep = '\n'
         data_list = re.split(field_sep, record.replace(record_sep,''))
@@ -2059,27 +2058,34 @@ def read_functional_annotation_record(file_name, file_id, record_counter):
             protein_species = data_list[14].strip()
             tair10_ortholog_seq_id = data_list[15].strip()
             tair10_description = data_list[16].strip()
-            qlobata_gene_id = data_list[17].strip()
-            interpro_goterms = data_list[18].strip()
-            panther_goterms = data_list[19].strip()
-            metacyc_pathways = data_list[20].strip()
-            # -- reactome_pathways = data_list[x].strip()
-            eggnog_ortholog_seq_id = data_list[21].strip()
-            eggnog_ortholog_species = data_list[22].strip()
-            eggnog_ogs = data_list[23].strip()
-            cog_category = data_list[24].strip()
-            eggnog_description = data_list[25].strip()
-            eggnog_goterms = data_list[26].strip()
-            ec = data_list[27].strip()
-            kegg_kos = data_list[28].strip()
-            kegg_pathways = data_list[29].strip()
-            kegg_modules = data_list[30].strip()
-            kegg_reactions = data_list[31].strip()
-            kegg_rclasses = data_list[32].strip()
-            brite = data_list[33].strip()
-            kegg_tc = data_list[34].strip()
-            cazy = data_list[35].strip()
-            pfams = data_list[36].strip()
+            qacutissima_homology = data_list[17].strip()
+            qdentata_homology = data_list[18].strip()
+            qgilva_homology = data_list[19].strip()
+            qlobata_homology = data_list[20].strip()
+            qlongispica_homology = data_list[21].strip()
+            qrobur_homology = data_list[22].strip()
+            qrubra_homology = data_list[23].strip()
+            qsuber_homology = data_list[24].strip()
+            qvariabilis_homology = data_list[25].strip()
+            interpro_goterms = data_list[26].strip()
+            panther_goterms = data_list[27].strip()
+            metacyc_pathways = data_list[28].strip()
+            eggnog_ortholog_seq_id = data_list[29].strip()
+            eggnog_ortholog_species = data_list[30].strip()
+            eggnog_ogs = data_list[31].strip()
+            cog_category = data_list[32].strip()
+            eggnog_description = data_list[33].strip()
+            eggnog_goterms = data_list[34].strip()
+            ec = data_list[35].strip()
+            kegg_kos = data_list[36].strip()
+            kegg_pathways = data_list[37].strip()
+            kegg_modules = data_list[38].strip()
+            kegg_reactions = data_list[39].strip()
+            kegg_rclasses = data_list[40].strip()
+            brite = data_list[41].strip()
+            kegg_tc = data_list[42].strip()
+            cazy = data_list[43].strip()
+            pfams = data_list[44].strip()
         except Exception as e:
             raise ProgramException(e, 'F006', os.path.basename(file_name), record_counter) from e
 
@@ -2087,8 +2093,7 @@ def read_functional_annotation_record(file_name, file_id, record_counter):
         key = f'{qseqid}-{sseqid}'
 
         # get the record data dictionary
-        # -- data_dict = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'length': length, 'mismatch': mismatch, 'gapopen': gapopen, 'qstart': qstart, 'qend': qend, 'sstart': sstart, 'send': send, 'evalue': evalue, 'bitscore': bitscore, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description,'qlobata_gene_id': qlobata_gene_id, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'reactome_pathways': reactome_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
-        data_dict = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'length': length, 'mismatch': mismatch, 'gapopen': gapopen, 'qstart': qstart, 'qend': qend, 'sstart': sstart, 'send': send, 'evalue': evalue, 'bitscore': bitscore, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description, 'qlobata_gene_id': qlobata_gene_id, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
+        data_dict = {'qseqid': qseqid, 'sseqid': sseqid, 'pident': pident, 'length': length, 'mismatch': mismatch, 'gapopen': gapopen, 'qstart': qstart, 'qend': qend, 'sstart': sstart, 'send': send, 'evalue': evalue, 'bitscore': bitscore, 'algorithm': algorithm, 'protein_description': protein_description, 'protein_species': protein_species, 'tair10_ortholog_seq_id': tair10_ortholog_seq_id, 'tair10_description': tair10_description, 'qacutissima_homology': qacutissima_homology, 'qdentata_homology': qdentata_homology, 'qgilva_homology': qgilva_homology, 'qlobata_homology': qlobata_homology, 'qlongispica_homology': qlongispica_homology, 'qrobur_homology': qrobur_homology, 'qrubra_homology': qrubra_homology, 'qsuber_homology': qsuber_homology, 'qvariabilis_homology': qvariabilis_homology, 'interpro_goterms': interpro_goterms, 'panther_goterms': panther_goterms, 'metacyc_pathways': metacyc_pathways, 'eggnog_ortholog_seq_id': eggnog_ortholog_seq_id, 'eggnog_ortholog_species': eggnog_ortholog_species, 'eggnog_ogs': eggnog_ogs, 'cog_category': cog_category, 'eggnog_description': eggnog_description, 'eggnog_goterms': eggnog_goterms, 'ec': ec, 'kegg_kos': kegg_kos, 'kegg_pathways': kegg_pathways, 'kegg_modules': kegg_modules, 'kegg_reactions': kegg_reactions, 'kegg_rclasses': kegg_rclasses, 'brite': brite, 'kegg_tc': kegg_tc, 'cazy': cazy, 'pfams': pfams}
 
     # if there is not record
     else:

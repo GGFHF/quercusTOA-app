@@ -40,7 +40,8 @@ cd $APP_DIR
 
 /usr/bin/time \
     ./concat-functional-annotations.py \
-        --db=$DATA_DIR/quercusTOA.db \
+        --annotations-db=$DATA_DIR/functional-annotations.db \
+        --comparative-db=$DATA_DIR/comparative-genomics.db \
         --blastp-alignments=$DATA_DIR/blastp-Quercus-alignments.csv \
         --blastx-alignments=$DATA_DIR/blastx-Quercus-alignments.csv \
         --blastn-alignments=$DATA_DIR/blast-lncRNA-alignments.csv \

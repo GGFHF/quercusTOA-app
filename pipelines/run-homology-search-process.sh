@@ -75,7 +75,7 @@ function init
     INIT_DATETIME=`date +%s`
     FORMATTED_INIT_DATETIME=`date "+%Y-%m-%d %H:%M:%S"`
     echo "$SEP"
-    echo "Enrichment analysis process started at $FORMATTED_INIT_DATETIME."
+    echo "Homology search process started at $FORMATTED_INIT_DATETIME."
 }
 
 #-------------------------------------------------------------------------------

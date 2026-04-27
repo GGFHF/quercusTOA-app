@@ -50,20 +50,20 @@ MAX_TARGET_SEQS=20
 MAX_HSPS=999999
 QCOV_HSP_PERC=0.0
 THREADS=4
-ANNOTATION_DIR=$HOME/results/annotation-test
+ANNOTATION_DIR=$HOME/quercusTOA-results/annotation-test
 
 # enrichment parameters (descriptions in run-enrichment-analysis-process.sh)
 SPECIES=all_species
 METHOD=by
 MSQANNOT=5
 MSQSPEC=10
-ENRICHMENT_DIR=$HOME/results/enrichment-test
+ENRICHMENT_DIR=$HOME/quercusTOA-results/enrichment-test
 
 # homology search parameters (descriptions in run-homology-search-process.sh)
 ANALYSIS_TYPE=TRANSCRIPTS
 ANALYSIS_FILE=$HOME/Apps/quercusTOA-app/sample-data/transcripts-81-suber-genes.fasta
 MODEL=PLANTS_full
-HOMOLOGY_DIR=$HOME/results/homology-test
+HOMOLOGY_DIR=$HOME/quercusTOA-results/homology-test
 
 #-------------------------------------------------------------------------------
 

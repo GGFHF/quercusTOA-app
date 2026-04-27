@@ -272,34 +272,6 @@ function align_transcriptome_2_qlobata_genes
 
 #-------------------------------------------------------------------------------
 
-function get_transcripts_geneid
-{
-
-    echo "$SEP"
-    echo "Getting the gene identification corresponding to transcripts ..."
-    if [[ "$FASTA_TYPE" == "TRANSCRIPTS" ]]; then
-        cd $ANNOTATION_DIR
-        source activate quercustoa
-        /usr/bin/time \
-            $QUERCUSTOA_APP_DIR/get-transcripts-geneid.py \
-                --gff=$TEMP/target.gff3 \
-                --format=GFF3 \
-                --out=$TEMP/transcripts-geneid.csv \
-                --verbose=N \
-                --trace=N \
-                --tvi=NONE
-        RC=$?
-        if [ $RC -ne 0 ]; then manage_error get-transcripts-geneid.py $RC; fi
-        conda deactivate
-        echo "Gene identifications are gotten."
-    elif [[ "$FASTA_TYPE" == "PROTEINS" ]]; then
-        touch $TEMP/transcripts-geneid.csv
-        echo "This step is not run with a proteins file."
-    fi
-}
-
-#-------------------------------------------------------------------------------
-
 function concat_functional_annotations
 {
     echo "$SEP"
@@ -308,11 +280,11 @@ function concat_functional_annotations
     source activate quercustoa
     /usr/bin/time \
         $QUERCUSTOA_APP_DIR/concat-functional-annotations.py \
-            --db=$QUERCUSTOA_DB_DIR/functional-annotations.db \
+            --annotations-db=$QUERCUSTOA_DB_DIR/functional-annotations.db \
+            --comparative-db=$QUERCUSTOA_DB_DIR/comparative-genomics.db \
             --blastp-alignments=$TEMP/blastp-clade-alignments.csv \
             --blastx-alignments=$TEMP/blastx-clade-alignments.csv \
             --blastn-alignments=$TEMP/blastn-lncrna-alignments.csv \
-            --transcripts_geneid=$TEMP/transcripts-geneid.csv \
             --complete_annotations=$ANNOTATION_DIR/functional-annotations-complete.csv \
             --besthit_annotations=$ANNOTATION_DIR/functional-annotations-besthit.csv \
             --verbose=N \
@@ -356,14 +328,14 @@ function add_heads
     /usr/bin/time \
         sed \
             --in-place \
-            "1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qlobata_gene_id;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams" \
+            "1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qacutissima_homology;qdentata_homology;qgilva_homology;qlobata_homology;qlongispica_homology;qrobur_homology;qrubra_homology;qsuber_homology;qvariabilis_homology;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams" \
             ./functional-annotations-complete.csv
     RC=$?
     if [ $RC -ne 0 ]; then manage_error sed $RC; fi
     /usr/bin/time \
         sed \
             --in-place \
-            "1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qlobata_gene_id;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams" \
+            "1i qseqid;sseqid;pident;length;mismatch;gapopen;qstart;qend;sstart;send;evalue;bitscore;algorithm;protein_description;protein_species;tair10_ortholog_seq_id;tair10_description;qacutissima_homology;qdentata_homology;qgilva_homology;qlobata_homology;qlongispica_homology;qrobur_homology;qrubra_homology;qsuber_homology;qvariabilis_homology;interpro_goterms;panther_goterms;metacyc_pathways;eggnog_ortholog_seq_id;eggnog_ortholog_species;eggnog_ogs;cog_category;eggnog_description;eggnog_goterms;ec;kegg_kos;kegg_pathways;kegg_modules;kegg_reactions;kegg_rclasses;brite;kegg_tc;cazy;pfams" \
             ./functional-annotations-besthit.csv
     RC=$?
     if [ $RC -ne 0 ]; then manage_error sed $RC; fi
@@ -456,7 +428,6 @@ align_peptides_2_alignment_tool_quercus_db
 align_transcriptome_2_alignment_tool_quercus_db
 align_transcriptome_2_blastplus_lncrna_db
 align_transcriptome_2_qlobata_genes
-get_transcripts_geneid
 concat_functional_annotations
 sort_functional_annotations
 add_heads
